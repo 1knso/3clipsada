@@ -1,6 +1,5 @@
 backend:
-  name: github
-  repo: 1knso/3clipsada # <--- AQUÍ ES DONDE VA TU USUARIO Y REPOSITORIO
+  name: git-gateway
   branch: main
 
 media_folder: "images"
