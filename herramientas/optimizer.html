@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3CLIPSADA /// OPTIMIZER TOOL</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* --- ESTÉTICA GRUNGE GOTHIC (AUTOCONTENIDA) --- */
+        :root {
+            --bg: #050505;
+            --text: #c0c0c0;
+            --accent: #8b0000;
+            --success: #2e8b57;
+            --font-head: 'Cinzel', serif;
+            --font-mono: 'Space Mono', monospace;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: var(--font-mono);
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow-x: hidden;
+        }
+
+        /* Ruido de fondo */
+        .noise {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            opacity: 0.05;
+            background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+            z-index: -1;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 800px;
+            text-align: center;
+            z-index: 10;
+        }
+
+        h1 {
+            font-family: var(--font-head);
+            font-size: 2.5rem;
+            color: var(--text);
+            text-shadow: 2px 2px 0px black;
+            margin-bottom: 0.5rem;
+            letter-spacing: 2px;
+        }
+
+        p.subtitle {
+            color: #666;
+            margin-bottom: 3rem;
+            font-size: 0.9rem;
+        }
+
+        /* ZONA DE ARRASTRE */
+        #drop-zone {
+            border: 2px dashed #333;
+            background: rgba(20, 20, 20, 0.5);
+            padding: 4rem 2rem;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #drop-zone:hover, #drop-zone.dragover {
+            border-color: var(--accent);
+            background: rgba(139, 0, 0, 0.05);
+            box-shadow: 0 0 20px rgba(139, 0, 0, 0.2);
+        }
+
+        #drop-zone p {
+            font-size: 1.2rem;
+            pointer-events: none;
+        }
+
+        .icon-upload {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            display: block;
+            color: var(--accent);
+        }
+
+        /* LISTA DE SALIDA */
+        #output-list {
+            margin-top: 3rem;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .file-item {
+            background: #111;
+            border: 1px solid #222;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .file-info {
+            text-align: left;
+        }
+
+        .file-name {
+            display: block;
+            color: #fff;
+            font-weight: bold;
+        }
+
+        .file-status {
+            font-size: 0.8rem;
+            color: var(--success);
+        }
+
+        .download-btn {
+            background: var(--bg);
+            border: 1px solid var(--text);
+            color: var(--text);
+            padding: 0.5rem 1rem;
+            text-decoration: none;
+            font-size: 0.8rem;
+            transition: 0.2s;
+            cursor: pointer;
+            font-family: var(--font-mono);
+        }
+
+        .download-btn:hover {
+            background: var(--text);
+            color: var(--bg);
+            border-color: var(--text);
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* INPUT OCULTO */
+        #file-input { display: none; }
+
+    </style>
+</head>
+<body>
+
+    <div class="noise"></div>
+
+    <div class="container">
+        <h1>ARTIFACT OPTIMIZER</h1>
+        <p class="subtitle">SYSTEM READY /// DRAG RAW FILES TO CONVERT TO WebP</p>
+
+        <div id="drop-zone">
+            <span class="icon-upload">⤓</span>
+            <p>[ DROP IMAGES HERE ]</p>
+            <span style="font-size: 0.8rem; color: #555; margin-top: 10px; display: block;">AUTO-RESIZE: 1600px WIDTH</span>
+        </div>
+        <input type="file" id="file-input" multiple accept="image/*">
+
+        <div id="output-list"></div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const outputList = document.getElementById('output-list');
+        const MAX_WIDTH = 1600; // Ancho máximo para que no pesen demasiado
+        const QUALITY = 0.85;   // Calidad WebP (0 a 1)
+
+        // Eventos Drag & Drop
+        dropZone.addEventListener('click', () => fileInput.click());
+        
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        function handleFiles(files) {
+            Array.from(files).forEach(processImage);
+        }
+
+        function processImage(file) {
+            if (!file.type.startsWith('image/')) return;
+
+            const reader = new FileReader();
+            
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    // Crear Canvas para redimensionar
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+
+                    // Calcular nuevas dimensiones
+                    if (width > MAX_WIDTH) {
+                        height = Math.round(height * (MAX_WIDTH / width));
+                        width = MAX_WIDTH;
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // Convertir a WebP
+                    canvas.toBlob((blob) => {
+                        createDownloadItem(file.name, blob);
+                    }, 'image/webp', QUALITY);
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function createDownloadItem(originalName, blob) {
+            const newName = originalName.replace(/\.[^/.]+$/, "") + ".webp";
+            const url = URL.createObjectURL(blob);
+            const sizeKB = (blob.size / 1024).toFixed(1);
+
+            const item = document.createElement('div');
+            item.className = 'file-item';
+            item.innerHTML = `
+                <div class="file-info">
+                    <span class="file-name">${newName}</span>
+                    <span class="file-status">OPTIMIZED /// ${sizeKB}KB</span>
+                </div>
+                <a href="${url}" download="${newName}" class="download-btn">DOWNLOAD ARTIFACT</a>
+            `;
+
+            outputList.appendChild(item);
+        }
+    </script>
+</body>
+</html>

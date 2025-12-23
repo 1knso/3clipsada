@@ -1,0 +1,24 @@
+backend:
+  name: github
+  repo: 1knso/3clipsada # <--- AQUÍ ES DONDE VA TU USUARIO Y REPOSITORIO
+  branch: main
+
+media_folder: "images"
+public_folder: "images"
+
+collections:
+  - name: "content"
+    label: "Contenido"
+    files:
+      - name: "gallery"
+        label: "Galería de Obras"
+        file: "gallery.json"
+        fields:
+          - name: "obras"
+            label: "Lista de Obras"
+            widget: "list"
+            fields:
+              - {label: "Título", name: "title", widget: "string"}
+              - {label: "Técnica", name: "technique", widget: "string"}
+              - {label: "Año", name: "year", widget: "string"}
+              - {label: "Imagen", name: "filename", widget: "image"}
